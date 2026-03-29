@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VideoAI MetaFlow — 影片智慧分析系統</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Noto+Sans+TC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   CSS CUSTOM PROPERTIES
+   ═══════════════════════════════════════════ */
+:root {
+  /* 背景色系 */
+  --bg-base: #F8FAFC;
+  --bg-card: #FFFFFF;
+  --bg-elevated: #FFFFFF;
+  --bg-inset: #F1F5F9;
+  --bg-overlay: rgba(15, 23, 42, 0.04);
+
+  /* 主色調 */
+  --primary: #3B82F6;
+  --primary-light: #DBEAFE;
+  --primary-dark: #1D4ED8;
+  --accent: #8B5CF6;
+  --accent-light: #EDE9FE;
+
+  /* 標籤色彩系統 */
+  --tag-theme: #3B82F6;
+  --tag-theme-bg: #EFF6FF;
+  --tag-audience: #8B5CF6;
+  --tag-audience-bg: #F5F3FF;
+  --tag-feature: #F59E0B;
+  --tag-feature-bg: #FFFBEB;
+  --tag-format: #10B981;
+  --tag-format-bg: #ECFDF5;
+  --tag-mood: #EF4444;
+  --tag-mood-bg: #FEF2F2;
+  --tag-product: #EC4899;
+  --tag-product-bg: #FDF2F8;
+
+  /* 評析色彩 */
+  --critique-pro: #10B981;
+  --critique-pro-bg: #ECFDF5;
+  --critique-con: #EF4444;
+  --critique-con-bg: #FEF2F2;
+  --critique-suggest: #3B82F6;
+  --critique-suggest-bg: #EFF6FF;
+  --critique-highlight: #F59E0B;
+  --critique-highlight-bg: #FFFBEB;
+
+  /* 文字色彩 */
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-tertiary: #94A3B8;
+  --text-inverse: #FFFFFF;
+
+  /* 邊框 */
+  --border: #E2E8F0;
+  --border-light: #F1F5F9;
+
+  /* 陰影系統 */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 8px 32px rgba(15, 23, 42, 0.08);
+  --shadow-xl: 0 16px 48px rgba(15, 23, 42, 0.10);
+  --shadow-glow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+
+  /* 圓角 */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* 間距（4px 網格） */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* 過渡 */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ═══════════════════════════════════════════
+   RESET & BASE
+   ═══════════════════════════════════════════ */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'DM Sans', 'Noto Sans TC', sans-serif;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* 背景微噪點紋理 */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  opacity: 0.3;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ═══════════════════════════════════════════
+   NAVIGATION
+   ═══════════════════════════════════════════ */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--border-light);
+  padding: 0 var(--space-8);
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  text-decoration: none;
+  color: var(--text-primary);
+}
+
+.nav-logo {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: -0.5px;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.nav-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  color: var(--text-primary);
+}
+
+.nav-title span {
+  color: var(--primary);
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+.nav-link:hover {
+  color: var(--text-primary);
+  background: var(--bg-overlay);
+}
+
+.nav-link.active {
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+.nav-link svg {
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+}
+
+.nav-mobile-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.nav-mobile-toggle:hover {
+  background: var(--bg-overlay);
+}
+
+/* ═══════════════════════════════════════════
+   BREADCRUMB
+   ═══════════════════════════════════════════ */
+.breadcrumb-bar {
+  padding: var(--space-3) var(--space-8);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+  color: var(--text-tertiary);
+  position: relative;
+  z-index: 1;
+}
+
+.breadcrumb-bar a {
+  color: var(--text-tertiary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.breadcrumb-bar a:hover {
+  color: var(--primary);
+}
+
+.breadcrumb-bar .sep {
+  font-size: 10px;
+}
+
+.breadcrumb-bar .current {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* ═══════════════════════════════════════════
+   MAIN LAYOUT
+   ═══════════════════════════════════════════ */
+.main {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-8) var(--space-16);
+  position: relative;
+  z-index: 1;
+}
+
+.video-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+/* ═══════════════════════════════════════════
+   VIDEO TITLE AREA
+   ═══════════════════════════════════════════ */
+.video-title-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-6);
+  margin-bottom: var(--space-2);
+  animation: fadeSlideUp 0.5s ease both;
+}
+
+.video-title-bar h1 {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.video-meta-inline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.video-meta-inline .dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--critique-pro-bg);
+  color: var(--critique-pro);
+}
+
+.status-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse-dot 2s ease infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ═══════════════════════════════════════════
+   LEFT COLUMN: VIDEO PLAYER
+   ═══════════════════════════════════════════ */
+.left-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  animation: fadeSlideUp 0.5s 0.1s ease both;
+}
+
+.player-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-light);
+}
+
+.player-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(145deg, #0F172A 0%, #1E293B 40%, #334155 100%);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+/* 網格背景 */
+.player-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* 漸層疊層 */
+.player-wrapper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 30% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 60%),
+              radial-gradient(ellipse at 70% 30%, rgba(139, 92, 246, 0.06) 0%, transparent 50%);
+}
+
+.player-center-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.play-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-base);
+  cursor: pointer;
+}
+
+.play-btn svg {
+  width: 28px;
+  height: 28px;
+  color: white;
+  margin-left: 3px;
+}
+
+.player-wrapper:hover .play-btn {
+  background: rgba(59, 130, 246, 0.85);
+  border-color: rgba(59, 130, 246, 0.9);
+  transform: scale(1.08);
+  box-shadow: 0 0 40px rgba(59, 130, 246, 0.3);
+}
+
+.player-time-overlay {
+  position: absolute;
+  bottom: var(--space-4);
+  right: var(--space-4);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.5px;
+}
+
+.player-title-overlay {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ═══════════════════════════════════════════
+   TIMELINE BAR
+   ═══════════════════════════════════════════ */
+.timeline-section {
+  padding: var(--space-5) var(--space-6);
+}
+
+.timeline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.timeline-header span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.timeline-legend {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.timeline-track {
+  position: relative;
+  width: 100%;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-inset);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.timeline-segment {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 3px;
+  transition: opacity var(--transition-fast), filter var(--transition-fast);
+}
+
+.timeline-segment:hover {
+  filter: brightness(1.1);
+  z-index: 2;
+}
+
+.timeline-marker {
+  position: absolute;
+  top: -2px;
+  width: 3px;
+  height: calc(100% + 4px);
+  border-radius: 2px;
+  z-index: 3;
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.timeline-marker::after {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: inherit;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+.timeline-marker:hover {
+  transform: scaleY(1.1);
+}
+
+.timeline-marker:hover::after {
+  transform: translateX(-50%) scale(1.3);
+}
+
+.timeline-timestamps {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-2);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.3px;
+}
+
+/* ═══════════════════════════════════════════
+   RIGHT COLUMN: METADATA PANEL
+   ═══════════════════════════════════════════ */
+.right-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  animation: fadeSlideUp 0.5s 0.2s ease both;
+}
+
+.panel-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: box-shadow var(--transition-base);
+}
+
+.panel-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.panel-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.panel-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--text-tertiary);
+}
+
+.panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
+}
+
+.panel-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: var(--bg-inset);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.panel-body {
+  padding: var(--space-5);
+}
+
+/* ═══════════════════════════════════════════
+   TAGS SECTION
+   ═══════════════════════════════════════════ */
+.tag-group {
+  margin-bottom: var(--space-4);
+}
+
+.tag-group:last-child {
+  margin-bottom: 0;
+}
+
+.tag-group-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.tag-group-label::before {
+  content: '';
+  width: 3px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.tag-group[data-category="theme"] .tag-group-label::before { background: var(--tag-theme); }
+.tag-group[data-category="audience"] .tag-group-label::before { background: var(--tag-audience); }
+.tag-group[data-category="feature"] .tag-group-label::before { background: var(--tag-feature); }
+.tag-group[data-category="format"] .tag-group-label::before { background: var(--tag-format); }
+.tag-group[data-category="mood"] .tag-group-label::before { background: var(--tag-mood); }
+.tag-group[data-category="product"] .tag-group-label::before { background: var(--tag-product); }
+
+.tags-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.tag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.1px;
+  cursor: default;
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
+}
+
+.tag-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.tag-badge[data-color="blue"] { background: var(--tag-theme-bg); color: var(--tag-theme); border-color: rgba(59, 130, 246, 0.15); }
+.tag-badge[data-color="purple"] { background: var(--tag-audience-bg); color: var(--tag-audience); border-color: rgba(139, 92, 246, 0.15); }
+.tag-badge[data-color="amber"] { background: var(--tag-feature-bg); color: var(--tag-feature); border-color: rgba(245, 158, 11, 0.15); }
+.tag-badge[data-color="green"] { background: var(--tag-format-bg); color: var(--tag-format); border-color: rgba(16, 185, 129, 0.15); }
+.tag-badge[data-color="red"] { background: var(--tag-mood-bg); color: var(--tag-mood); border-color: rgba(239, 68, 68, 0.15); }
+.tag-badge[data-color="pink"] { background: var(--tag-product-bg); color: var(--tag-product); border-color: rgba(236, 72, 153, 0.15); }
+
+.tag-badge .confidence {
+  font-size: 10px;
+  opacity: 0.6;
+  font-family: 'JetBrains Mono', monospace;
+  margin-left: 2px;
+}
+
+/* ═══════════════════════════════════════════
+   SUMMARY SECTION
+   ═══════════════════════════════════════════ */
+.summary-text {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.summary-text strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.summary-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-light);
+}
+
+.metric-item {
+  text-align: center;
+}
+
+.metric-value {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--text-primary);
+}
+
+.metric-value.blue { color: var(--primary); }
+.metric-value.purple { color: var(--accent); }
+.metric-value.green { color: var(--critique-pro); }
+
+.metric-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* ═══════════════════════════════════════════
+   CRITIQUE ANNOTATIONS
+   ═══════════════════════════════════════════ */
+.critique-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.critique-item {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+  cursor: pointer;
+}
+
+.critique-item:hover {
+  background: var(--bg-inset);
+}
+
+.critique-type-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  height: 24px;
+  letter-spacing: 0.2px;
+}
+
+.critique-type-badge[data-type="pro"] {
+  background: var(--critique-pro-bg);
+  color: var(--critique-pro);
+}
+
+.critique-type-badge[data-type="con"] {
+  background: var(--critique-con-bg);
+  color: var(--critique-con);
+}
+
+.critique-type-badge[data-type="suggest"] {
+  background: var(--critique-suggest-bg);
+  color: var(--critique-suggest);
+}
+
+.critique-type-badge[data-type="highlight"] {
+  background: var(--critique-highlight-bg);
+  color: var(--critique-highlight);
+}
+
+.critique-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.critique-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: var(--space-1);
+}
+
+.critique-timestamp {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--primary);
+  background: var(--primary-light);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: none;
+}
+
+.critique-timestamp:hover {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.critique-timestamp svg {
+  width: 10px;
+  height: 10px;
+}
+
+/* ═══════════════════════════════════════════
+   EXPORT BUTTON
+   ═══════════════════════════════════════════ */
+.export-section {
+  padding: var(--space-4) var(--space-5);
+  background: linear-gradient(135deg, var(--bg-inset) 0%, rgba(59, 130, 246, 0.03) 100%);
+  border-top: 1px solid var(--border-light);
+}
+
+.export-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.export-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+}
+
+.export-btn:active {
+  transform: translateY(0);
+}
+
+.export-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ═══════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════ */
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE: TABLET
+   ═══════════════════════════════════════════ */
+@media (max-width: 1100px) {
+  .video-detail-grid {
+    grid-template-columns: 1fr 360px;
+    gap: var(--space-6);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE: MOBILE
+   ═══════════════════════════════════════════ */
+@media (max-width: 860px) {
+  .nav {
+    padding: 0 var(--space-4);
+  }
+
+  .nav-links {
+    display: none;
+    position: absolute;
+    top: 64px;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: var(--space-2) var(--space-4);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .nav-links.open {
+    display: flex;
+  }
+
+  .nav-mobile-toggle {
+    display: flex;
+  }
+
+  .breadcrumb-bar {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .main {
+    padding: var(--space-4) var(--space-4) var(--space-12);
+  }
+
+  .video-detail-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+  }
+
+  .video-title-bar {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .video-title-bar h1 {
+    font-size: 20px;
+  }
+
+  .timeline-legend {
+    display: none;
+  }
+
+  .summary-metrics {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .player-wrapper {
+    border-radius: 0;
+  }
+
+  .player-card {
+    border-radius: var(--radius-lg);
+    margin: 0 calc(var(--space-4) * -1);
+    border-radius: 0;
+  }
+
+  .timeline-section {
+    padding: var(--space-4);
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- NAVIGATION                                 -->
+<!-- ═══════════════════════════════════════════ -->
+<nav class="nav">
+  <a class="nav-brand" href="#">
+    <div class="nav-logo">V</div>
+    <div class="nav-title">Video<span>AI</span> MetaFlow</div>
+  </a>
+
+  <div class="nav-links" id="navLinks">
+    <a class="nav-link active" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>
+      影片庫
+    </a>
+    <a class="nav-link" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      上傳
+    </a>
+    <a class="nav-link" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      搜尋
+    </a>
+  </div>
+
+  <button class="nav-mobile-toggle" id="mobileToggle" aria-label="選單">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+</nav>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- BREADCRUMB                                 -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="breadcrumb-bar">
+  <a href="#">影片庫</a>
+  <span class="sep">›</span>
+  <a href="#">科技類</a>
+  <span class="sep">›</span>
+  <span class="current">MacBook Pro M4 Max 開箱實測</span>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- MAIN CONTENT                               -->
+<!-- ═══════════════════════════════════════════ -->
+<main class="main">
+  <div class="video-detail-grid">
+
+    <!-- TITLE BAR -->
+    <div class="video-title-bar">
+      <div>
+        <h1>MacBook Pro M4 Max 開箱實測：效能怪獸值不值得買？</h1>
+        <div class="video-meta-inline">
+          <span>2026 年 3 月 15 日上傳</span>
+          <span class="dot"></span>
+          <span>12:34</span>
+          <span class="dot"></span>
+          <span>1080p</span>
+          <span class="dot"></span>
+          <span class="status-badge">分析完成</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEFT COLUMN -->
+    <div class="left-col">
+
+      <!-- Video Player -->
+      <div class="player-card">
+        <div class="player-wrapper" id="playerWrapper">
+          <div class="player-title-overlay">Preview</div>
+          <div class="player-center-content">
+            <button class="play-btn" aria-label="播放">
+              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </button>
+          </div>
+          <div class="player-time-overlay">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            12:34
+          </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="timeline-section">
+          <div class="timeline-header">
+            <span>時間軸段落</span>
+            <div class="timeline-legend">
+              <div class="legend-item"><div class="legend-dot" style="background: var(--tag-theme);"></div> 開箱介紹</div>
+              <div class="legend-item"><div class="legend-dot" style="background: var(--tag-format);"></div> 效能測試</div>
+              <div class="legend-item"><div class="legend-dot" style="background: var(--tag-feature);"></div> 外觀設計</div>
+              <div class="legend-item"><div class="legend-dot" style="background: var(--tag-audience);"></div> 總結評價</div>
+            </div>
+          </div>
+
+          <div class="timeline-track" id="timelineTrack">
+            <!-- 段落色塊 -->
+            <div class="timeline-segment" style="left: 0%; width: 12%; background: var(--tag-theme); opacity: 0.7;" title="片頭介紹 0:00–1:30"></div>
+            <div class="timeline-segment" style="left: 12%; width: 22%; background: var(--tag-theme); opacity: 0.55;" title="開箱展示 1:30–4:12"></div>
+            <div class="timeline-segment" style="left: 34%; width: 14%; background: var(--tag-feature); opacity: 0.65;" title="外觀設計 4:12–5:56"></div>
+            <div class="timeline-segment" style="left: 48%; width: 28%; background: var(--tag-format); opacity: 0.7;" title="效能實測 5:56–9:24"></div>
+            <div class="timeline-segment" style="left: 76%; width: 12%; background: var(--tag-feature); opacity: 0.55;" title="螢幕音效 9:24–10:54"></div>
+            <div class="timeline-segment" style="left: 88%; width: 12%; background: var(--tag-audience); opacity: 0.65;" title="總結推薦 10:54–12:34"></div>
+
+            <!-- 評析標記 -->
+            <div class="timeline-marker" style="left: 15%; background: var(--critique-highlight);" title="亮點 1:52"></div>
+            <div class="timeline-marker" style="left: 38%; background: var(--critique-pro);" title="優點 4:42"></div>
+            <div class="timeline-marker" style="left: 55%; background: var(--critique-pro);" title="優點 6:48"></div>
+            <div class="timeline-marker" style="left: 68%; background: var(--critique-con);" title="待改善 8:24"></div>
+            <div class="timeline-marker" style="left: 82%; background: var(--critique-suggest);" title="建議 10:08"></div>
+            <div class="timeline-marker" style="left: 93%; background: var(--critique-highlight);" title="亮點 11:30"></div>
+          </div>
+
+          <div class="timeline-timestamps">
+            <span>0:00</span>
+            <span>2:30</span>
+            <span>5:00</span>
+            <span>7:30</span>
+            <span>10:00</span>
+            <span>12:34</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: METADATA PANELS -->
+    <div class="right-col">
+
+      <!-- Tags Panel -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <div class="panel-header-left">
+            <svg class="panel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            <span class="panel-title">智慧標籤</span>
+          </div>
+          <span class="panel-count">12 標籤</span>
+        </div>
+        <div class="panel-body">
+
+          <div class="tag-group" data-category="theme">
+            <div class="tag-group-label">影片主題</div>
+            <div class="tags-wrap">
+              <span class="tag-badge" data-color="blue">開箱評測 <span class="confidence">0.96</span></span>
+              <span class="tag-badge" data-color="blue">產品體驗 <span class="confidence">0.91</span></span>
+            </div>
+          </div>
+
+          <div class="tag-group" data-category="audience">
+            <div class="tag-group-label">目標受眾</div>
+            <div class="tags-wrap">
+              <span class="tag-badge" data-color="purple">科技愛好者 <span class="confidence">0.94</span></span>
+              <span class="tag-badge" data-color="purple">專業創作者 <span class="confidence">0.82</span></span>
+            </div>
+          </div>
+
+          <div class="tag-group" data-category="feature">
+            <div class="tag-group-label">商品特色</div>
+            <div class="tags-wrap">
+              <span class="tag-badge" data-color="amber">輕薄設計 <span class="confidence">0.88</span></span>
+              <span class="tag-badge" data-color="amber">高效能晶片 <span class="confidence">0.95</span></span>
+              <span class="tag-badge" data-color="amber">Liquid Retina XDR <span class="confidence">0.87</span></span>
+            </div>
+          </div>
+
+          <div class="tag-group" data-category="mood">
+            <div class="tag-group-label">情緒語調</div>
+            <div class="tags-wrap">
+              <span class="tag-badge" data-color="red">熱情推薦 <span class="confidence">0.89</span></span>
+              <span class="tag-badge" data-color="red">客觀分析 <span class="confidence">0.78</span></span>
+            </div>
+          </div>
+
+          <div class="tag-group" data-category="product">
+            <div class="tag-group-label">提及產品</div>
+            <div class="tags-wrap">
+              <span class="tag-badge" data-color="pink">MacBook Pro M4 Max <span class="confidence">0.99</span></span>
+              <span class="tag-badge" data-color="pink">Apple M4 Max 晶片 <span class="confidence">0.93</span></span>
+              <span class="tag-badge" data-color="pink">MagSafe 充電器 <span class="confidence">0.71</span></span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Summary Panel -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <div class="panel-header-left">
+            <svg class="panel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            <span class="panel-title">AI 摘要</span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <p class="summary-text">
+            本影片為 <strong>MacBook Pro M4 Max</strong> 的完整開箱與實測評價。創作者從外包裝設計開始，詳細展示了機身的<strong>太空黑配色</strong>與全新散熱模組結構。效能測試環節涵蓋 Cinebench R24、DaVinci Resolve 時間軸回放及 Blender 渲染等專業場景，展現 M4 Max 晶片在多核心運算的顯著提升。影片最後針對<strong>定價策略</strong>與不同使用情境提出購買建議，整體風格兼具專業性與觀賞性，適合對高階筆電有購買需求的觀眾參考。
+          </p>
+          <div class="summary-metrics">
+            <div class="metric-item">
+              <div class="metric-value blue">96<span style="font-size: 13px; font-weight: 500;">%</span></div>
+              <div class="metric-label">分析信心度</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-value purple">6</div>
+              <div class="metric-label">段落切分</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-value green">12</div>
+              <div class="metric-label">標籤數量</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Critique Panel -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <div class="panel-header-left">
+            <svg class="panel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            <span class="panel-title">製作人評析</span>
+          </div>
+          <span class="panel-count">6 則</span>
+        </div>
+        <div class="panel-body" style="padding: var(--space-3);">
+          <div class="critique-list">
+
+            <div class="critique-item">
+              <span class="critique-type-badge" data-type="highlight">亮點</span>
+              <div class="critique-content">
+                <p class="critique-text">開場 hook 設計出色，以快速跑分畫面搭配懸念字幕，前 5 秒即成功引起觀眾好奇心。</p>
+                <button class="critique-timestamp" data-time="0:08">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  0:08
+                </button>
+              </div>
+            </div>
+
+            <div class="critique-item">
+              <span class="critique-type-badge" data-type="pro">優點</span>
+              <div class="critique-content">
+                <p class="critique-text">開箱段落運鏡流暢，微距特寫展示機身細節（CNC 切邊、鍵帽觸感），有效傳達產品質感。</p>
+                <button class="critique-timestamp" data-time="1:52">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  1:52
+                </button>
+              </div>
+            </div>
+
+            <div class="critique-item">
+              <span class="critique-type-badge" data-type="pro">優點</span>
+              <div class="critique-content">
+                <p class="critique-text">效能測試以分割畫面同步對比 M3 Max 數據，資訊密度高且直觀易懂，提升內容說服力。</p>
+                <button class="critique-timestamp" data-time="6:48">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  6:48
+                </button>
+              </div>
+            </div>
+
+            <div class="critique-item">
+              <span class="critique-type-badge" data-type="con">待改善</span>
+              <div class="critique-content">
+                <p class="critique-text">續航力測試段落僅以口述帶過，缺乏實際使用時間紀錄或圖表佐證，建議補充客觀數據。</p>
+                <button class="critique-timestamp" data-time="8:24">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  8:24
+                </button>
+              </div>
+            </div>
+
+            <div class="critique-item">
+              <span class="critique-type-badge" data-type="suggest">建議</span>
+              <div class="critique-content">
+                <p class="critique-text">總結段落可加入價格帶分析表格，針對不同預算推薦對應機型配置，提升觀眾購買決策參考價值。</p>
+                <button class="critique-timestamp" data-time="10:08">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  10:08
+                </button>
+              </div>
+            </div>
+
+            <div class="critique-item">
+              <span class="critique-type-badge" data-type="highlight">亮點</span>
+              <div class="critique-content">
+                <p class="critique-text">結尾 CTA 結合個人使用心得，語氣真誠自然，有效引導觀眾留言互動與訂閱轉換。</p>
+                <button class="critique-timestamp" data-time="11:30">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  11:30
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Export -->
+        <div class="export-section">
+          <button class="export-btn" id="exportBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            匯出分析報告
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script>
+/* ═══════════════════════════════════════════
+   互動邏輯
+   ═══════════════════════════════════════════ */
+
+// 手機版選單切換
+document.getElementById('mobileToggle').addEventListener('click', function() {
+  document.getElementById('navLinks').classList.toggle('open');
+});
+
+// 點擊播放按鈕動畫
+document.getElementById('playerWrapper').addEventListener('click', function() {
+  const btn = this.querySelector('.play-btn');
+  btn.style.transform = 'scale(0.9)';
+  setTimeout(() => { btn.style.transform = ''; }, 150);
+});
+
+// 時間戳按鈕點擊效果
+document.querySelectorAll('.critique-timestamp').forEach(function(btn) {
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const time = this.getAttribute('data-time');
+    // 視覺回饋：短暫高亮
+    this.style.transform = 'scale(0.95)';
+    setTimeout(() => { this.style.transform = ''; }, 150);
+    // 可在此處加入跳轉播放邏輯
+    console.log('跳轉至時間點:', time);
+  });
+});
+
+// 時間軸段落 hover tooltip
+document.querySelectorAll('.timeline-segment, .timeline-marker').forEach(function(el) {
+  el.addEventListener('mouseenter', function() {
+    this.style.opacity = '1';
+  });
+  el.addEventListener('mouseleave', function() {
+    // 恢復原本 opacity（段落用）
+    if (this.classList.contains('timeline-segment')) {
+      const orig = this.style.opacity;
+    }
+  });
+});
+
+// 匯出按鈕點擊效果
+document.getElementById('exportBtn').addEventListener('click', function() {
+  const original = this.innerHTML;
+  this.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 報告已匯出';
+  this.style.background = 'linear-gradient(135deg, #10B981 0%, #059669 100%)';
+  this.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.3)';
+  setTimeout(() => {
+    this.innerHTML = original;
+    this.style.background = '';
+    this.style.boxShadow = '';
+  }, 2000);
+});
+
+// 評析項目點擊高亮對應時間軸標記
+document.querySelectorAll('.critique-item').forEach(function(item) {
+  item.addEventListener('click', function() {
+    // 移除所有高亮
+    document.querySelectorAll('.critique-item').forEach(function(i) {
+      i.style.background = '';
+    });
+    // 加入當前高亮
+    this.style.background = 'var(--bg-inset)';
+  });
+});
+</script>
+
+</body>
+</html>

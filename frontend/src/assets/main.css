@@ -1,0 +1,247 @@
+@import 'tailwindcss';
+
+/* ===== 賽博朋克設計系統 — Design Tokens ===== */
+
+@theme {
+  /* 主色系 — 霓虹綠 */
+  --color-primary-50: rgba(0, 255, 136, 0.05);
+  --color-primary-100: rgba(0, 255, 136, 0.1);
+  --color-primary-200: rgba(0, 255, 136, 0.2);
+  --color-primary-300: rgba(0, 255, 136, 0.35);
+  --color-primary-400: #00ff88;
+  --color-primary-500: #00ff88;
+  --color-primary-600: #00cc6d;
+  --color-primary-700: #00994f;
+  --color-primary-800: #006633;
+  --color-primary-900: #003319;
+
+  /* 副色系 — 霓虹紫 / 青 */
+  --color-accent-50: rgba(255, 0, 255, 0.05);
+  --color-accent-100: rgba(255, 0, 255, 0.1);
+  --color-accent-200: rgba(255, 0, 255, 0.2);
+  --color-accent-300: rgba(255, 0, 255, 0.35);
+  --color-accent-400: #ff00ff;
+  --color-accent-500: #ff00ff;
+  --color-accent-600: #cc00cc;
+  --color-accent-700: #990099;
+
+  /* 第三色 — 霓虹青 */
+  --color-tertiary: #00d4ff;
+
+  /* 表面 / 背景 */
+  --color-surface: #12121a;
+  --color-surface-alt: #0a0a0f;
+  --color-surface-hover: #1c1c2e;
+  --color-border: #2a2a3a;
+  --color-border-strong: #3a3a4f;
+
+  /* 文字 */
+  --color-text-primary: #e0e0e0;
+  --color-text-secondary: #9ca3af;
+  --color-text-muted: #6b7280;
+
+  /* 狀態色 */
+  --color-success: #00ff88;
+  --color-warning: #ffbd2e;
+  --color-error: #ff3366;
+
+  /* 標籤分類色彩 — 霓虹版 */
+  --color-tag-theme: #00ff88;
+  --color-tag-audience: #00d4ff;
+  --color-tag-feature: #ff00ff;
+  --color-tag-format: #00ff88;
+  --color-tag-mood: #ff3366;
+  --color-tag-product: #ff00ff;
+  --color-tag-language: #6b7280;
+
+  /* 間距 (基於 4px 網格) */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-12: 48px;
+
+  /* 圓角 — 賽博朋克不用圓角，使用切角 clip-path */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+  --radius-full: 9999px;
+
+  /* 霓虹光暈陰影 */
+  --shadow-sm: 0 0 3px #00ff88, 0 0 6px rgba(0, 255, 136, 0.2);
+  --shadow-md: 0 0 5px #00ff88, 0 0 10px rgba(0, 255, 136, 0.25);
+  --shadow-lg: 0 0 10px #00ff88, 0 0 20px rgba(0, 255, 136, 0.4), 0 0 40px rgba(0, 255, 136, 0.2);
+
+  /* 字體 */
+  --font-sans: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  --font-heading: 'Orbitron', 'Share Tech Mono', monospace;
+  --font-label: 'Share Tech Mono', monospace;
+}
+
+/* ===== CSS 自訂屬性（不透過 @theme 的部分） ===== */
+:root {
+  /* 切角 clip-path */
+  --chamfer: polygon(
+    0 10px, 10px 0,
+    calc(100% - 10px) 0, 100% 10px,
+    100% calc(100% - 10px), calc(100% - 10px) 100%,
+    10px 100%, 0 calc(100% - 10px)
+  );
+  --chamfer-sm: polygon(
+    0 6px, 6px 0,
+    calc(100% - 6px) 0, 100% 6px,
+    100% calc(100% - 6px), calc(100% - 6px) 100%,
+    6px 100%, 0 calc(100% - 6px)
+  );
+
+  /* 霓虹光暈（其他顏色） */
+  --shadow-neon-secondary: 0 0 5px #ff00ff, 0 0 20px rgba(255, 0, 255, 0.4);
+  --shadow-neon-tertiary: 0 0 5px #00d4ff, 0 0 20px rgba(0, 212, 255, 0.4);
+  --shadow-neon-error: 0 0 5px #ff3366, 0 0 15px rgba(255, 51, 102, 0.4);
+}
+
+/* ===== 動畫 ===== */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes glitch {
+  0%, 100% { transform: translate(0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(2px, -2px); }
+  60% { transform: translate(-1px, -1px); }
+  80% { transform: translate(1px, 1px); }
+}
+
+@keyframes rgbShift {
+  0%, 100% { text-shadow: -2px 0 #ff00ff, 2px 0 #00d4ff; }
+  50% { text-shadow: 2px 0 #ff00ff, -2px 0 #00d4ff; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 5px #00ff88, 0 0 10px rgba(0, 255, 136, 0.25); }
+  50% { box-shadow: 0 0 10px #00ff88, 0 0 25px rgba(0, 255, 136, 0.4), 0 0 50px rgba(0, 255, 136, 0.2); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ===== 全域基礎樣式 ===== */
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+  background-color: var(--color-surface-alt);
+  line-height: 1.6;
+  letter-spacing: 0.03em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* 電路板網格背景 */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    linear-gradient(rgba(0, 255, 136, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 136, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 掃描線疊層 */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* 確保主內容在背景層之上 */
+#app {
+  position: relative;
+  z-index: 1;
+}
+
+/* 卷軸樣式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface-alt);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary-400);
+  box-shadow: 0 0 6px var(--color-primary-400);
+}
+
+/* ===== 工具類別 ===== */
+
+/* 切角卡片 */
+.cyber-clip {
+  clip-path: var(--chamfer);
+}
+
+.cyber-clip-sm {
+  clip-path: var(--chamfer-sm);
+}
+
+/* Glitch 文字效果 */
+.glitch-text {
+  animation: rgbShift 3s ease-in-out infinite;
+}
+
+/* 霓虹光暈邊框 */
+.neon-border {
+  border: 1px solid var(--color-primary-400);
+  box-shadow: var(--shadow-md);
+}
+
+/* 閃爍游標 */
+.terminal-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  background: var(--color-primary-400);
+  animation: blink 1s step-end infinite;
+  vertical-align: middle;
+  margin-left: 4px;
+}

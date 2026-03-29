@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VideoAI MetaFlow — 影片自動化標籤與摘要系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+/* ============================================
+   DESIGN TOKENS
+   ============================================ */
+:root {
+  --bg: #0a0a0f;
+  --fg: #e0e0e0;
+  --card: #12121a;
+  --muted: #1c1c2e;
+  --muted-fg: #6b7280;
+  --accent: #00ff88;
+  --accent-secondary: #ff00ff;
+  --accent-tertiary: #00d4ff;
+  --border: #2a2a3a;
+  --input: #12121a;
+  --destructive: #ff3366;
+  --ring: #00ff88;
+
+  --shadow-neon: 0 0 5px #00ff88, 0 0 10px #00ff8840;
+  --shadow-neon-sm: 0 0 3px #00ff88, 0 0 6px #00ff8830;
+  --shadow-neon-lg: 0 0 10px #00ff88, 0 0 20px #00ff8860, 0 0 40px #00ff8830;
+  --shadow-neon-secondary: 0 0 5px #ff00ff, 0 0 20px #ff00ff60;
+  --shadow-neon-tertiary: 0 0 5px #00d4ff, 0 0 20px #00d4ff60;
+
+  --font-heading: 'Orbitron', 'Share Tech Mono', monospace;
+  --font-body: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  --font-label: 'Share Tech Mono', monospace;
+
+  --chamfer: polygon(
+    0 10px, 10px 0,
+    calc(100% - 10px) 0, 100% 10px,
+    100% calc(100% - 10px), calc(100% - 10px) 100%,
+    10px 100%, 0 calc(100% - 10px)
+  );
+  --chamfer-sm: polygon(
+    0 6px, 6px 0,
+    calc(100% - 6px) 0, 100% 6px,
+    100% calc(100% - 6px), calc(100% - 6px) 100%,
+    6px 100%, 0 calc(100% - 6px)
+  );
+}
+
+/* ============================================
+   RESET & BASE
+   ============================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  letter-spacing: 0.03em;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* ============================================
+   CIRCUIT GRID BACKGROUND
+   ============================================ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============================================
+   SCANLINE OVERLAY
+   ============================================ */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.15) 2px,
+    rgba(0,0,0,0.15) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes glitch {
+  0%, 100% { transform: translate(0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(2px, -2px); }
+  60% { transform: translate(-1px, -1px); }
+  80% { transform: translate(1px, 1px); }
+}
+
+@keyframes rgbShift {
+  0%, 100% { text-shadow: -2px 0 #ff00ff, 2px 0 #00d4ff; }
+  50% { text-shadow: 2px 0 #ff00ff, -2px 0 #00d4ff; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 5px #00ff88, 0 0 10px #00ff8840; }
+  50% { box-shadow: 0 0 10px #00ff88, 0 0 25px #00ff8860, 0 0 50px #00ff8830; }
+}
+
+@keyframes scanMove {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes dataStream {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 -200px; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes timelinePulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================
+   LAYOUT UTILITIES
+   ============================================ */
+.container {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 24px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================
+   HEADER / NAV
+   ============================================ */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10, 10, 15, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+}
+
+.header-inner {
+  max-width: 1440px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.logo-icon {
+  width: 36px;
+  height: 36px;
+  position: relative;
+}
+
+.logo-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.logo-text {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+  animation: rgbShift 3s ease-in-out infinite;
+  position: relative;
+}
+
+.logo-text::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-secondary), var(--accent-tertiary));
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-link {
+  font-family: var(--font-label);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted-fg);
+  text-decoration: none;
+  padding: 8px 16px;
+  transition: all 0.2s ease;
+  position: relative;
+  clip-path: var(--chamfer-sm);
+  background: transparent;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: var(--accent);
+  background: rgba(0, 255, 136, 0.08);
+}
+
+.nav-link.active::before {
+  content: '>';
+  margin-right: 6px;
+  animation: blink 1s step-end infinite;
+}
+
+.nav-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-label);
+  font-size: 0.75rem;
+  color: var(--muted-fg);
+  margin-left: 16px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--accent);
+  animation: blink 2s ease-in-out infinite;
+}
+
+/* ============================================
+   MAIN CONTENT GRID
+   ============================================ */
+.main {
+  padding: 24px 0 48px;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.breadcrumb {
+  font-family: var(--font-label);
+  font-size: 0.8rem;
+  color: var(--muted-fg);
+  margin-bottom: 16px;
+  padding: 0 24px;
+  max-width: 1440px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.breadcrumb span { color: var(--accent); }
+
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 24px;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ============================================
+   VIDEO PLAYER AREA
+   ============================================ */
+.player-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.video-title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.video-title {
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg);
+}
+
+.video-title .accent { color: var(--accent); }
+
+.video-meta-inline {
+  display: flex;
+  gap: 16px;
+  font-family: var(--font-label);
+  font-size: 0.75rem;
+  color: var(--muted-fg);
+}
+
+.video-player {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: #08080d;
+  clip-path: var(--chamfer);
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+
+.video-player::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 30% 40%, rgba(0,255,136,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 70% 60%, rgba(0,212,255,0.03) 0%, transparent 60%);
+  z-index: 1;
+}
+
+.player-grid-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(0,255,136,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,136,0.02) 1px, transparent 1px);
+  background-size: 30px 30px;
+  z-index: 1;
+}
+
+.play-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,255,136,0.1);
+  border: 2px solid var(--accent);
+  clip-path: var(--chamfer);
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-neon);
+}
+
+.play-button:hover {
+  background: rgba(0,255,136,0.2);
+  box-shadow: var(--shadow-neon-lg);
+}
+
+.play-button svg {
+  width: 32px;
+  height: 32px;
+  fill: var(--accent);
+  margin-left: 4px;
+}
+
+.player-timestamp {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  font-family: var(--font-label);
+  font-size: 0.85rem;
+  color: var(--accent);
+  z-index: 3;
+  text-shadow: 0 0 8px rgba(0,255,136,0.6);
+}
+
+.player-hud {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-family: var(--font-label);
+  font-size: 0.7rem;
+  color: var(--accent-tertiary);
+  z-index: 3;
+  text-align: right;
+  line-height: 1.8;
+  text-shadow: 0 0 6px rgba(0,212,255,0.5);
+}
+
+.player-corner {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  z-index: 3;
+}
+.player-corner--tl { top: 8px; left: 8px; border-top: 2px solid var(--accent); border-left: 2px solid var(--accent); }
+.player-corner--tr { top: 8px; right: 8px; border-top: 2px solid var(--accent); border-right: 2px solid var(--accent); }
+.player-corner--bl { bottom: 8px; left: 8px; border-bottom: 2px solid var(--accent); border-left: 2px solid var(--accent); }
+.player-corner--br { bottom: 8px; right: 8px; border-bottom: 2px solid var(--accent); border-right: 2px solid var(--accent); }
+
+/* ============================================
+   TIMELINE
+   ============================================ */
+.timeline-section {
+  margin-top: 2px;
+  background: var(--card);
+  padding: 16px 20px;
+  clip-path: polygon(
+    0 6px, 6px 0,
+    calc(100% - 6px) 0, 100% 6px,
+    100% calc(100% - 6px), calc(100% - 6px) 100%,
+    6px 100%, 0 calc(100% - 6px)
+  );
+  border: 1px solid var(--border);
+}
+
+.timeline-label {
+  font-family: var(--font-label);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--muted-fg);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeline-label::before {
+  content: '//';
+  color: var(--accent);
+}
+
+.timeline-bar {
+  position: relative;
+  height: 32px;
+  background: var(--muted);
+  clip-path: var(--chamfer-sm);
+  overflow: hidden;
+  display: flex;
+}
+
+.timeline-segment {
+  height: 100%;
+  position: relative;
+  transition: filter 0.2s ease;
+  cursor: pointer;
+}
+
+.timeline-segment:hover {
+  filter: brightness(1.3);
+}
+
+.timeline-segment[data-type="opening"]   { background: rgba(0, 212, 255, 0.5); }
+.timeline-segment[data-type="unboxing"]  { background: rgba(0, 255, 136, 0.5); }
+.timeline-segment[data-type="review"]    { background: rgba(255, 0, 255, 0.4); }
+.timeline-segment[data-type="benchmark"] { background: rgba(255, 51, 102, 0.4); }
+.timeline-segment[data-type="summary"]   { background: rgba(0, 212, 255, 0.35); }
+
+.timeline-marker {
+  position: absolute;
+  top: -2px;
+  width: 3px;
+  height: calc(100% + 4px);
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+  z-index: 2;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.timeline-marker:hover {
+  transform: scaleX(2);
+}
+
+.timeline-marker[data-kind="strength"]  { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.timeline-marker[data-kind="improve"]   { background: var(--destructive); box-shadow: 0 0 6px var(--destructive); }
+.timeline-marker[data-kind="suggest"]   { background: var(--accent-tertiary); box-shadow: 0 0 6px var(--accent-tertiary); }
+.timeline-marker[data-kind="highlight"] { background: var(--accent-secondary); box-shadow: 0 0 6px var(--accent-secondary); }
+
+.timeline-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-label);
+  font-size: 0.65rem;
+  color: var(--muted-fg);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.legend-swatch {
+  width: 12px;
+  height: 8px;
+  clip-path: var(--chamfer-sm);
+}
+
+.legend-marker {
+  width: 3px;
+  height: 12px;
+}
+
+/* ============================================
+   TERMINAL INFO BAR
+   ============================================ */
+.terminal-bar {
+  margin-top: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  clip-path: var(--chamfer);
+  overflow: hidden;
+}
+
+.terminal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.terminal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.terminal-dot--red { background: #ff5f56; }
+.terminal-dot--yellow { background: #ffbd2e; }
+.terminal-dot--green { background: #27c93f; }
+
+.terminal-title {
+  font-family: var(--font-label);
+  font-size: 0.7rem;
+  color: var(--muted-fg);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-left: 8px;
+}
+
+.terminal-body {
+  padding: 12px 16px;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  line-height: 1.8;
+  color: var(--muted-fg);
+}
+
+.terminal-line {
+  display: flex;
+  gap: 8px;
+}
+
+.terminal-line .prompt {
+  color: var(--accent);
+  user-select: none;
+}
+
+.terminal-line .key {
+  color: var(--accent-tertiary);
+  min-width: 100px;
+}
+
+.terminal-line .val {
+  color: var(--fg);
+}
+
+.terminal-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  background: var(--accent);
+  animation: blink 1s step-end infinite;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
+/* ============================================
+   SIDE PANEL
+   ============================================ */
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Card base */
+.cyber-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  clip-path: var(--chamfer);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+  position: relative;
+}
+
+.cyber-card:hover {
+  border-color: rgba(0,255,136,0.3);
+  box-shadow: var(--shadow-neon-sm);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-title {
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+}
+
+.card-title-icon {
+  font-size: 0.7rem;
+  color: var(--muted-fg);
+}
+
+.card-body {
+  padding: 14px 18px 18px;
+}
+
+/* ============================================
+   TAGS
+   ============================================ */
+.tags-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-family: var(--font-label);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  clip-path: var(--chamfer-sm);
+  transition: all 0.2s ease;
+  cursor: default;
+  position: relative;
+}
+
+.tag-category {
+  font-size: 0.6rem;
+  opacity: 0.7;
+}
+
+.tag--theme {
+  background: rgba(0, 255, 136, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(0, 255, 136, 0.25);
+}
+.tag--theme:hover { box-shadow: var(--shadow-neon-sm); }
+
+.tag--audience {
+  background: rgba(0, 212, 255, 0.12);
+  color: var(--accent-tertiary);
+  border: 1px solid rgba(0, 212, 255, 0.25);
+}
+.tag--audience:hover { box-shadow: var(--shadow-neon-tertiary); }
+
+.tag--feature {
+  background: rgba(255, 0, 255, 0.1);
+  color: var(--accent-secondary);
+  border: 1px solid rgba(255, 0, 255, 0.2);
+}
+.tag--feature:hover { box-shadow: var(--shadow-neon-secondary); }
+
+.tag--mood {
+  background: rgba(255, 51, 102, 0.1);
+  color: var(--destructive);
+  border: 1px solid rgba(255, 51, 102, 0.2);
+}
+.tag--mood:hover { box-shadow: 0 0 5px var(--destructive), 0 0 15px rgba(255,51,102,0.4); }
+
+.tag--style {
+  background: rgba(0, 255, 136, 0.06);
+  color: #a0ffc8;
+  border: 1px solid rgba(0, 255, 136, 0.15);
+}
+
+/* ============================================
+   SUMMARY
+   ============================================ */
+.summary-text {
+  font-size: 0.82rem;
+  line-height: 1.85;
+  color: var(--fg);
+  letter-spacing: 0.02em;
+}
+
+.summary-text p {
+  margin-bottom: 10px;
+}
+
+.summary-text p:last-child {
+  margin-bottom: 0;
+}
+
+.summary-confidence {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-family: var(--font-label);
+  font-size: 0.7rem;
+  color: var(--muted-fg);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.confidence-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--muted);
+  clip-path: var(--chamfer-sm);
+  overflow: hidden;
+}
+
+.confidence-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-tertiary));
+  box-shadow: 0 0 6px var(--accent);
+  transition: width 0.8s ease;
+}
+
+.confidence-val {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ============================================
+   CRITIQUE ANNOTATIONS
+   ============================================ */
+.critique-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.critique-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--muted);
+  clip-path: var(--chamfer-sm);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  align-items: flex-start;
+}
+
+.critique-item:hover {
+  background: rgba(28, 28, 46, 0.8);
+}
+
+.critique-timestamp {
+  font-family: var(--font-label);
+  font-size: 0.68rem;
+  color: var(--accent-tertiary);
+  white-space: nowrap;
+  min-width: 42px;
+  padding-top: 2px;
+}
+
+.critique-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-family: var(--font-label);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  clip-path: var(--chamfer-sm);
+  white-space: nowrap;
+  min-width: fit-content;
+}
+
+.critique-badge--strength {
+  background: rgba(0, 255, 136, 0.15);
+  color: var(--accent);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.critique-badge--improve {
+  background: rgba(255, 51, 102, 0.12);
+  color: var(--destructive);
+  border: 1px solid rgba(255, 51, 102, 0.25);
+}
+
+.critique-badge--suggest {
+  background: rgba(0, 212, 255, 0.12);
+  color: var(--accent-tertiary);
+  border: 1px solid rgba(0, 212, 255, 0.25);
+}
+
+.critique-badge--highlight {
+  background: rgba(255, 0, 255, 0.1);
+  color: var(--accent-secondary);
+  border: 1px solid rgba(255, 0, 255, 0.2);
+}
+
+.critique-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.critique-text {
+  font-size: 0.78rem;
+  color: var(--fg);
+  line-height: 1.5;
+}
+
+/* ============================================
+   EXPORT BUTTON
+   ============================================ */
+.export-section {
+  position: relative;
+}
+
+.export-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 24px;
+  font-family: var(--font-heading);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--bg);
+  background: var(--accent);
+  border: none;
+  clip-path: var(--chamfer);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-neon);
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+.export-btn:hover {
+  box-shadow: var(--shadow-neon-lg);
+  background: #33ffaa;
+}
+
+.export-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.export-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: var(--card);
+  border: 1px solid var(--accent);
+  clip-path: var(--chamfer);
+  box-shadow: var(--shadow-neon);
+  z-index: 50;
+  display: none;
+  overflow: hidden;
+}
+
+.export-dropdown.open {
+  display: block;
+}
+
+.export-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  font-family: var(--font-label);
+  font-size: 0.78rem;
+  color: var(--fg);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.export-option:hover {
+  background: rgba(0, 255, 136, 0.1);
+  color: var(--accent);
+}
+
+.export-option::before {
+  content: '>';
+  color: var(--accent);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.export-option:hover::before {
+  opacity: 1;
+}
+
+.export-option + .export-option {
+  border-top: 1px solid var(--border);
+}
+
+/* ============================================
+   GLITCH TITLE EFFECT
+   ============================================ */
+.glitch-title {
+  position: relative;
+  display: inline-block;
+}
+
+.glitch-title::before,
+.glitch-title::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.glitch-title::before {
+  color: var(--accent-secondary);
+  clip: rect(0, 900px, 0, 0);
+  animation: glitch 2.5s infinite linear alternate-reverse;
+  z-index: -1;
+}
+
+.glitch-title::after {
+  color: var(--accent-tertiary);
+  clip: rect(0, 900px, 0, 0);
+  animation: glitch 2s infinite linear alternate;
+  z-index: -1;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1024px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .side-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .export-section {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-inner {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 12px 0;
+    gap: 8px;
+  }
+
+  .nav {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .nav-status {
+    margin-left: auto;
+  }
+
+  .side-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .video-title {
+    font-size: 1rem;
+  }
+
+  .video-meta-inline {
+    display: none;
+  }
+
+  .content-grid {
+    padding: 0 16px;
+  }
+
+  .breadcrumb {
+    padding: 0 16px;
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .nav-link {
+    font-size: 0.75rem;
+    padding: 6px 10px;
+  }
+
+  .logo-text {
+    font-size: 1rem;
+  }
+
+  .timeline-legend {
+    gap: 8px;
+  }
+
+  .legend-item {
+    font-size: 0.6rem;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== HEADER ========== -->
+<header class="header">
+  <div class="header-inner">
+    <a href="#" class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 8L18 2L32 8V28L18 34L4 28V8Z" stroke="#00ff88" stroke-width="1.5" fill="none"/>
+          <path d="M12 14L18 10L24 14V22L18 26L12 22V14Z" fill="#00ff8830" stroke="#00ff88" stroke-width="1"/>
+          <circle cx="18" cy="18" r="3" fill="#00ff88"/>
+          <line x1="18" y1="2" x2="18" y2="10" stroke="#00ff8850" stroke-width="0.5"/>
+          <line x1="18" y1="26" x2="18" y2="34" stroke="#00ff8850" stroke-width="0.5"/>
+        </svg>
+      </div>
+      <span class="logo-text glitch-title" data-text="VideoAI MetaFlow">VideoAI MetaFlow</span>
+    </a>
+
+    <nav class="nav">
+      <a href="#" class="nav-link">影片庫</a>
+      <a href="#" class="nav-link active">上傳</a>
+      <a href="#" class="nav-link">搜尋</a>
+    </nav>
+
+    <div class="nav-status">
+      <span class="status-dot"></span>
+      <span>SYS:ONLINE</span>
+    </div>
+  </div>
+</header>
+
+<!-- ========== MAIN ========== -->
+<main class="main">
+  <div class="breadcrumb">
+    影片庫 / 科技產品 / <span>MacBook Pro M4 開箱實測</span>
+  </div>
+
+  <div class="content-grid">
+    <!-- LEFT: Player + Timeline + Terminal -->
+    <div class="player-section">
+
+      <div class="video-title-bar">
+        <h1 class="video-title">
+          <span class="accent">[</span> MacBook Pro M4 開箱實測｜值得升級嗎？ <span class="accent">]</span>
+        </h1>
+        <div class="video-meta-inline">
+          <span>14:32</span>
+          <span>1080p</span>
+          <span>2024.12.15</span>
+        </div>
+      </div>
+
+      <!-- Video Player -->
+      <div class="video-player" id="videoPlayer">
+        <div class="player-grid-overlay"></div>
+        <div class="player-corner player-corner--tl"></div>
+        <div class="player-corner player-corner--tr"></div>
+        <div class="player-corner player-corner--bl"></div>
+        <div class="player-corner player-corner--br"></div>
+
+        <div class="play-button" id="playBtn">
+          <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+        </div>
+
+        <div class="player-timestamp">00:00 / 14:32</div>
+
+        <div class="player-hud">
+          RES: 1920x1080<br>
+          FPS: 30<br>
+          CODEC: H.264<br>
+          AI_PROC: COMPLETE
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="timeline-section">
+        <div class="timeline-label">時間軸分析 — AI 自動分段 & 評析標記</div>
+        <div class="timeline-bar" id="timelineBar">
+          <!-- Segments -->
+          <div class="timeline-segment" data-type="opening" style="width: 8%" title="開場介紹 0:00-1:09"></div>
+          <div class="timeline-segment" data-type="unboxing" style="width: 22%" title="開箱環節 1:09-4:18"></div>
+          <div class="timeline-segment" data-type="review" style="width: 35%" title="外觀與功能評測 4:18-9:24"></div>
+          <div class="timeline-segment" data-type="benchmark" style="width: 20%" title="效能跑分測試 9:24-12:18"></div>
+          <div class="timeline-segment" data-type="summary" style="width: 15%" title="總結與推薦 12:18-14:32"></div>
+
+          <!-- Critique Markers -->
+          <div class="timeline-marker" data-kind="highlight" style="left: 12%" title="亮點 1:44"></div>
+          <div class="timeline-marker" data-kind="strength" style="left: 35%" title="優點 5:05"></div>
+          <div class="timeline-marker" data-kind="improve" style="left: 52%" title="待改善 7:33"></div>
+          <div class="timeline-marker" data-kind="suggest" style="left: 68%" title="建議 9:52"></div>
+          <div class="timeline-marker" data-kind="strength" style="left: 78%" title="優點 11:20"></div>
+          <div class="timeline-marker" data-kind="highlight" style="left: 92%" title="亮點 13:22"></div>
+        </div>
+
+        <div class="timeline-legend">
+          <div class="legend-item"><div class="legend-swatch" style="background:rgba(0,212,255,0.5)"></div>開場</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:rgba(0,255,136,0.5)"></div>開箱</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:rgba(255,0,255,0.4)"></div>評測</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:rgba(255,51,102,0.4)"></div>跑分</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:rgba(0,212,255,0.35)"></div>總結</div>
+          <div class="legend-item" style="margin-left:8px;"><div class="legend-marker" style="background:var(--accent);width:3px;height:12px;"></div>優點</div>
+          <div class="legend-item"><div class="legend-marker" style="background:var(--destructive);width:3px;height:12px;"></div>待改善</div>
+          <div class="legend-item"><div class="legend-marker" style="background:var(--accent-tertiary);width:3px;height:12px;"></div>建議</div>
+          <div class="legend-item"><div class="legend-marker" style="background:var(--accent-secondary);width:3px;height:12px;"></div>亮點</div>
+        </div>
+      </div>
+
+      <!-- Terminal Info Bar -->
+      <div class="terminal-bar">
+        <div class="terminal-header">
+          <div class="terminal-dot terminal-dot--red"></div>
+          <div class="terminal-dot terminal-dot--yellow"></div>
+          <div class="terminal-dot terminal-dot--green"></div>
+          <span class="terminal-title">metaflow_analysis.log</span>
+        </div>
+        <div class="terminal-body">
+          <div class="terminal-line"><span class="prompt">$</span> <span class="key">檔案名稱</span> <span class="val">macbook_pro_m4_unboxing_final.mp4</span></div>
+          <div class="terminal-line"><span class="prompt">$</span> <span class="key">處理狀態</span> <span class="val" style="color:var(--accent)">■ 分析完成</span></div>
+          <div class="terminal-line"><span class="prompt">$</span> <span class="key">AI 模型</span> <span class="val">MetaFlow-V3.2-TW (多模態)</span></div>
+          <div class="terminal-line"><span class="prompt">$</span> <span class="key">處理時間</span> <span class="val">47.3s</span></div>
+          <div class="terminal-line"><span class="prompt">$</span> <span class="key">偵測語言</span> <span class="val">zh-TW (繁體中文) — 信心度 98.7%</span></div>
+          <div class="terminal-line"><span class="prompt">$</span> <span class="key">標籤數量</span> <span class="val">8 tags generated</span></div>
+          <div class="terminal-line"><span class="prompt">></span> <span class="val" style="color:var(--muted-fg)">ready_for_export<span class="terminal-cursor"></span></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Side Panel -->
+    <div class="side-panel">
+
+      <!-- Tags Card -->
+      <div class="cyber-card">
+        <div class="card-header">
+          <span class="card-title">// 色彩標籤</span>
+          <span class="card-title-icon">8 TAGS</span>
+        </div>
+        <div class="card-body">
+          <div class="tags-grid">
+            <span class="tag tag--theme"><span class="tag-category">主題:</span>開箱</span>
+            <span class="tag tag--theme"><span class="tag-category">主題:</span>產品評測</span>
+            <span class="tag tag--audience"><span class="tag-category">受眾:</span>科技愛好者</span>
+            <span class="tag tag--audience"><span class="tag-category">受眾:</span>Apple 用戶</span>
+            <span class="tag tag--feature"><span class="tag-category">特色:</span>輕薄設計</span>
+            <span class="tag tag--feature"><span class="tag-category">特色:</span>M4 晶片</span>
+            <span class="tag tag--mood"><span class="tag-category">情緒:</span>正面推薦</span>
+            <span class="tag tag--style"><span class="tag-category">風格:</span>深度分析</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary Card -->
+      <div class="cyber-card">
+        <div class="card-header">
+          <span class="card-title">// 智能摘要</span>
+          <span class="card-title-icon">AI GEN</span>
+        </div>
+        <div class="card-body">
+          <div class="summary-text">
+            <p>本集影片完整開箱 2024 年末推出的 MacBook Pro M4，從外觀設計、螢幕表現到效能跑分進行全方位實測。創作者特別著墨於 M4 晶片在多工處理與影片剪輯場景下的流暢度提升，並與前代 M3 進行了直觀的數據對比。</p>
+            <p>影片後段提供選購建議，針對不同預算與使用情境給出清晰的推薦方案。整體節奏明快，資訊密度高，適合正在觀望是否升級的潛在消費者。</p>
+          </div>
+          <div class="summary-confidence">
+            <span>摘要信心度</span>
+            <div class="confidence-bar">
+              <div class="confidence-fill" style="width: 94%"></div>
+            </div>
+            <span class="confidence-val">94%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Critique Card -->
+      <div class="cyber-card">
+        <div class="card-header">
+          <span class="card-title">// 製作人評析</span>
+          <span class="card-title-icon">6 NOTES</span>
+        </div>
+        <div class="card-body">
+          <div class="critique-list">
+            <div class="critique-item">
+              <span class="critique-timestamp">1:44</span>
+              <div class="critique-content">
+                <span class="critique-badge critique-badge--highlight">亮點</span>
+                <span class="critique-text">開箱鏡頭運鏡流暢，特寫切換節奏感佳，吸引觀眾注意力</span>
+              </div>
+            </div>
+            <div class="critique-item">
+              <span class="critique-timestamp">5:05</span>
+              <div class="critique-content">
+                <span class="critique-badge critique-badge--strength">優點</span>
+                <span class="critique-text">螢幕色彩比較段落使用分割畫面，直觀清楚</span>
+              </div>
+            </div>
+            <div class="critique-item">
+              <span class="critique-timestamp">7:33</span>
+              <div class="critique-content">
+                <span class="critique-badge critique-badge--improve">待改善</span>
+                <span class="critique-text">鍵盤打字測試段落過長，節奏拖沓，建議縮短至 30 秒內</span>
+              </div>
+            </div>
+            <div class="critique-item">
+              <span class="critique-timestamp">9:52</span>
+              <div class="critique-content">
+                <span class="critique-badge critique-badge--suggest">建議</span>
+                <span class="critique-text">跑分數據可增加圖表動畫輔助，提升觀眾理解速度</span>
+              </div>
+            </div>
+            <div class="critique-item">
+              <span class="critique-timestamp">11:20</span>
+              <div class="critique-content">
+                <span class="critique-badge critique-badge--strength">優點</span>
+                <span class="critique-text">多工測試場景選擇貼近真實使用情境，說服力強</span>
+              </div>
+            </div>
+            <div class="critique-item">
+              <span class="critique-timestamp">13:22</span>
+              <div class="critique-content">
+                <span class="critique-badge critique-badge--highlight">亮點</span>
+                <span class="critique-text">總結段落以價格帶分流推薦，觀眾導購效果好</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Export Button -->
+      <div class="export-section">
+        <button class="export-btn" id="exportBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          匯出分析報告
+        </button>
+        <div class="export-dropdown" id="exportDropdown">
+          <button class="export-option" data-format="json">JSON 結構化資料</button>
+          <button class="export-option" data-format="csv">CSV 標籤表格</button>
+          <button class="export-option" data-format="srt">SRT 字幕 + 標注</button>
+          <button class="export-option" data-format="pdf">PDF 完整報告</button>
+          <button class="export-option" data-format="api">API Webhook 推送</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script>
+// 匯出按鈕下拉選單
+const exportBtn = document.getElementById('exportBtn');
+const exportDropdown = document.getElementById('exportDropdown');
+
+exportBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  exportDropdown.classList.toggle('open');
+});
+
+document.addEventListener('click', () => {
+  exportDropdown.classList.remove('open');
+});
+
+exportDropdown.addEventListener('click', (e) => {
+  e.stopPropagation();
+});
+
+// 匯出選項點擊回饋
+document.querySelectorAll('.export-option').forEach(opt => {
+  opt.addEventListener('click', () => {
+    const format = opt.dataset.format;
+    opt.textContent = '> 匯出中...';
+    opt.style.color = 'var(--accent)';
+    setTimeout(() => {
+      opt.textContent = '✓ 匯出完成';
+      setTimeout(() => {
+        exportDropdown.classList.remove('open');
+        // 還原文字
+        const labels = {
+          json: 'JSON 結構化資料',
+          csv: 'CSV 標籤表格',
+          srt: 'SRT 字幕 + 標注',
+          pdf: 'PDF 完整報告',
+          api: 'API Webhook 推送'
+        };
+        opt.textContent = labels[format];
+        opt.style.color = '';
+      }, 1000);
+    }, 800);
+  });
+});
+
+// 播放按鈕視覺回饋
+const playBtn = document.getElementById('playBtn');
+let isPlaying = false;
+
+playBtn.addEventListener('click', () => {
+  isPlaying = !isPlaying;
+  if (isPlaying) {
+    playBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="var(--accent)"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+  } else {
+    playBtn.innerHTML = '<svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21" fill="var(--accent)"/></svg>';
+  }
+});
+
+// 時間軸 hover tooltip 效果
+document.querySelectorAll('.timeline-segment, .timeline-marker').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    el.style.zIndex = '5';
+  });
+  el.addEventListener('mouseleave', () => {
+    el.style.zIndex = '';
+  });
+});
+</script>
+</body>
+</html>
