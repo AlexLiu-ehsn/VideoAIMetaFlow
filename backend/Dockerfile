@@ -8,8 +8,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 安裝 Python 依賴
+# 安裝 Python 依賴（需先複製 app/ 讓 hatchling 能找到套件）
 COPY pyproject.toml .
+COPY app/ ./app/
 RUN pip install --no-cache-dir .
 
 # 複製應用程式
