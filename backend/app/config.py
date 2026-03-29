@@ -15,8 +15,15 @@ class Settings(BaseSettings):
     # Gemini API
     gemini_api_key: str = ""
 
-    # PostgreSQL
+    # PostgreSQL（支援 Zeabur 注入的 POSTGRES_URI 格式）
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/videometa"
+    postgres_uri: str = ""  # Zeabur 自動注入，格式為 postgresql://...
+
+    @property
+    def resolved_database_url(self) -> str:
+        """優先使用 POSTGRES_URI（Zeabur），自動轉換為 asyncpg 格式"""
+        url = self.postgres_uri or self.database_url
+        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
     # 應用設定
     app_host: str = "0.0.0.0"
