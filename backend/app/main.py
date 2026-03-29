@@ -64,13 +64,13 @@ async def lifespan(app: FastAPI):
     settings.thumbnails_path.mkdir(parents=True, exist_ok=True)
     # 恢復上次未完成的分析任務
     await _recover_incomplete_videos()
-    _logger.info("ViedoAIMetaFlow 後端服務已啟動，監聽 port %s", settings.app_port)
+    _logger.info("VideoAIMetaFlow 後端服務已啟動，監聽 port %s", settings.app_port)
     yield
     _logger.info("後端服務已關閉")
 
 
 app = FastAPI(
-    title="ViedoAIMetaFlow",
+    title="VideoAIMetaFlow",
     description="影片自動化標籤與摘要系統",
     version="0.1.0",
     lifespan=lifespan,
